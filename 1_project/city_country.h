@@ -5,8 +5,6 @@
 
 enum { STO = 100 };
 
-void clear_buffer(void);
-void newstr(char *str);
 void newgets(char *str,int g);
 int exist_all(const char *str);
 int is_special(unsigned char c);

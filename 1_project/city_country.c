@@ -3,30 +3,77 @@
 #include <string.h>
 #include <ctype.h>
 #include "city_country.h"
-
-void clear_buffer() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}
-// Удаляет символ '\n' в конце строки, если он есть
-
-void newstr(char *str) {
-    size_t len = strlen(str);
-    if (len > 0 && str[len - 1] == '\n')
-        str[len - 1] = '\0';
-}
+#include <conio.h>
 
 // Безопасный ввод строки с клавиатуры
 // g — размер буфера
 void newgets(char *str,int g){
-    fgets(str,g,stdin);
-    if (strlen(str)==g-1 && str[g-2]!='\n')
+    printf("(%d - максимальная длина строки) ",g-2);
+    int cc=0;
+    int lenstrd=16;
+    int len =0;
+    char *dstr = (char*)malloc(lenstrd*sizeof(char));
+    if (!dstr)
+    {
+        return;
+    }
+    while ((cc==13 && len==0) || cc!=13)
+    {
+        cc=_getch();
+        if (cc==27)
+        {
+            str[0]=27;
+            str[1]='\0';
+            free(dstr);
+            printf("\n");
+            return;
+        }
+        else if (cc==13)
+        {
+            if (len != 0)
+            {
+                dstr[len]='\0';
+                // str[i+1]='\0';
+                printf("\n");
+                break;
+            }
+        }
+        else if (cc==8)
+        {
+            if (len>0)
+            {
+                len--;
+                printf("\b \b");
+            }
+        }
+        else if (isprint(cc) || (unsigned char)cc >= 0x80) { 
+            if (len +1>=lenstrd )
+            {
+                lenstrd *=2;
+                char *newdstr = (char *)realloc(dstr,lenstrd*sizeof(char));
+                if (!newdstr)
+                {
+                    free(dstr);
+                    return;
+                }
+                dstr = newdstr;
+
+            }
+            // Печатаем только печатные символы и расширенную кириллицу
+            dstr[len++] = (char)cc;
+            printf("%c", cc); // Отображаем ввод пользователю
+        }
+    }
+    if (len >= g-1)
     {
         printf("ошибка размера строки!!!\n");
-        clear_buffer();
         strncpy(str,"error",g-1);
     }
-    else newstr(str);
+    else
+    {
+        strcpy(str, dstr);
+    }
+    free(dstr);
 }
 // Проверяет, удалось ли открыть файл
 // f — указатель на файл
@@ -41,29 +88,28 @@ int pr_file(FILE *f,char *NAME){
 // Проверяет, пуста ли строка
 // Если пользователь нажал Enter — предлагает выйти в меню
 int exist_all(const char *str){
-    // str уже после newstr()
-    if (strlen(str) > 0)
-        return 2;          // продолжаем
-    char buf[10];
-    printf("Вы нажали Enter. Выйти в главное меню? (1-да, 2-нет): ");
-    while (1){
-        newgets(buf,10);
-        if (strcmp(buf,"error")==0) 
+    if (str[0]==27)
+    {
+        char buf[10];
+        printf("Вы нажали Esc. Выйти в главное меню? (1-да, 2-нет): ");
+        while (1)
         {
-            printf("Вы нажали Enter. Выйти в главное меню? (1-да, 2-нет): ");
-            continue; 
+            newgets(buf,10);
+            if (buf[0] == 27) return 2;
+            if (strcmp(buf, "1") == 0)
+                return 9;      // да, выходим
+            if (strcmp(buf, "2") == 0)
+                return 2;      // нет, продолжаем
+            printf("Ошибка, некорректный выбор :%s\nВыйти в главное меню (1-да, 2-нет): ",buf);
         }
-        if (strcmp(buf, "1") == 0)
-            return 9;      // да, выходим
-        if (strcmp(buf, "2") == 0)
-            return 2;      // нет, продолжаем
-        printf("Ошибка: введите 1 или 2: ");
     }
+    return 2;              
 }
 // Запрещённые спецсимволы для любых текстов (и для файла, и для данных)
 int is_special(unsigned char c){
-    return (c == '\\' || c == '/' || c == ':' || c == '*' ||
-            c == '?'  || c == '"' || c == '<' || c == '>' || c == '|');
+    if (ispunct(c) || c==0xB9)
+        return 1;
+    return 0;
 }
 // Проверяет, является ли символ русской буквой (кодировка Windows-1251)
 int is_rus_alpha(unsigned char c){
@@ -135,7 +181,7 @@ void newfile(char *NAME,int *k){
         printf("\n");
         printf("Ваш выбор: ");
         valuestr[0]='\0';
-        newgets(valuestr, sizeof valuestr);
+        newgets(valuestr, 11);
         if (strcmp(valuestr,"error")==0)
             continue;
         v=exist_all(valuestr);
@@ -143,9 +189,9 @@ void newfile(char *NAME,int *k){
             *k=4;
             return;
         }
-        if (valuestr[0] != '\0'){
+        if (valuestr[0] != 27){
             if (strcmp(valuestr,"4") !=0 && strcmp(valuestr,"3") !=0 && strcmp(valuestr,"2") !=0 && strcmp(valuestr,"1") !=0)
-                printf("Ошибка: неизвестный выбор: %s\n",valuestr);
+                printf("Ошибка, некорректный выбор: %s\n",valuestr);
         }
     } while (strcmp(valuestr,"4") !=0 && strcmp(valuestr,"3") !=0 && strcmp(valuestr,"2") !=0 && strcmp(valuestr,"1") !=0);
     if (strcmp(valuestr,"1") ==0)
@@ -162,7 +208,7 @@ void newfile(char *NAME,int *k){
                 return;
             }
             *k=2;
-        } while (!strlen(NAME) || strcmp(NAME,"error")==0);
+        } while (NAME[0]==27  || strcmp(NAME,"error")==0);
     }
     else if (strcmp(valuestr,"3") ==0){
         do
@@ -176,7 +222,7 @@ void newfile(char *NAME,int *k){
                 return;
             }
             *k=3;
-        } while (!strlen(NAME) || strcmp(NAME,"error")==0);
+        } while (NAME[0]==27 || strcmp(NAME,"error")==0);
     }
     else 
     {
@@ -191,32 +237,50 @@ void newfile(char *NAME,int *k){
 void pr_str(char *str,int *k)
 {
     int K=0;//показывает ошибки,если в конце =1 то их не было
-    if (strlen(str)==0)
-        return;
+
     while (!K)
     {
         K=pr_space(str);
-        if (K==1){
-            for (int i=0;i<strlen(str);i++){
+        if (K==1)
+        {
+            int found=0;
+            int H=0;
+            int found1=0;
+            char str1[STO];
+            memset(str1,0,sizeof(str1));
+            for (int i=0;i<strlen(str);i++)
+            {
                 unsigned char c = (unsigned char)str[i];
-                if (is_special(c) == 1){
-                    printf("Ошибка: спецсимвол в названии: %c\n", c);
+                if (is_special(c) == 1 && !(c==' ' || c=='-'))
+                {
+                    H=0;
+                    for (int g=0;g<found;g++)
+                    {
+                        if (str1[g]==c)
+                            H=1;
+                    }
+                    if (H==0){
+                        str1[found] = c;
+                        found++;
+                    }
                     K=0;
-                    break;
                 }
-                if (isdigit((unsigned char)c)) {
-                    printf("Ошибка: цифра в названии\n");
+                else if (isdigit((unsigned char)c)) {
+                    found1++;
                     K=0;
-                    break;
-                }
-
-                else if (!(isalpha(c) || is_rus_alpha(c) || c==' ' || c=='-')){
-                    printf("Ошибка: некорректный символ в названии :%c\n",c);
-                    K=0;
-                    break;
                 }
             }
+            if (found > 0)
+            {
+                printf("Ошибка, спецсимволы в названии: %s\n",str1);
+                memset(str1,0,sizeof(str1));
+            }
+            if (found1==1)
+                printf("Ошибка: цифра в названии\n");
+            else if (found1>1)
+                printf("Ошибка: цифры в названии\n");
         }
+
         if (!K){
             do
             {
@@ -229,7 +293,7 @@ void pr_str(char *str,int *k)
                     return;
                 }
 
-            } while (!strlen(str) || strcmp(str,"error")==0);
+            } while (str[0]==27  || strcmp(str,"error")==0);
         }
     }
 
@@ -241,25 +305,66 @@ void pr_dig(char *chel,char *str,int *k){
     int K=0;
     while (K==0){
         K=1;
+        char str1[STO];
+        char str2[STO];
+        memset(str1,0,sizeof(str1));
+        memset(str2,0,sizeof(str2));
+        int found=0;
+        int found1=0;
+        int H=0;
+        int G=0;
         for (int j=0;j<strlen(chel);j++){
+            char u=chel[j];
             unsigned char c = (unsigned char)chel[j];
             if (!isdigit(c)){
-                printf("Ошибка: введён непонятный символ в числе:%c\n",c);
+                if (is_special(c))
+                {
+                    H=0;
+                    for (int g=0;g<found;g++)
+                    {
+                        if (str1[g]==c)
+                            H=1;
+                    }
+                    if (H==0){
+                        str1[found] = c;
+                        found++;
+                    }
+                }
+                if (is_rus_alpha(u) || isalpha(u))
+                {
+                    G=0;
+                    for (int g=0;g<found1;g++)
+                    {
+                        if (str2[g]==u)
+                            G=1;
+                    }
+                    if (G==0){
+                        str2[found1] = u;
+                        found1++;
+                    }
+                }
                 K=0;
-                break;
             }
 
         }
+        if (found > 0 )
+            printf("Ошибка, в числе присутствуют спецсимволы:%s\n",str1);
+        if (found1>0)
+            printf("Ошибка, в числе присутствуют буквы:%s\n",str2);
+        if (found >0 || found1 >0)
+            printf("Для ввода числа используйте только цифры!!!\n");
+        memset(str1, 0, sizeof(str1));
+        memset(str2, 0, sizeof(str2));
         if (!K){
             do
             {
                 printf("%s",str);
-                newgets(chel,10);
+                newgets(chel,15);
                 if (strcmp(chel,"error")==0) continue;              
                 *k=exist_all(chel);
                 if (*k==9)
                     return;
-            } while (!strlen(chel) || strcmp(chel,"error")==0);
+            } while (chel[0]==27  || strcmp(chel,"error")==0);
         }
     }
 }
@@ -285,13 +390,29 @@ int pr_name(char *NAME,int *k){
     strncpy(core, NAME, len);
     core[len] = '\0';
     // спецсимволы
+    int found=0;
+    int H;
+    char str1[STO];
     for (size_t i = 0; i < len; i++){
-        char c = core[i];
-        if (is_special(c)){
-            printf("Ошибка: запрещённый символ в имени файла: %c\n", c);
-            return 0;
+        unsigned c = (unsigned char)core[i];
+        if (is_special(c) && !(c==' ' || c=='-')){
+            H=0;
+            for (int g=0;g<found;g++)
+            {
+                if (str1[g]==c)
+                    H=1;
+            }
+            if (H==0){
+                str1[found] = c;
+                found++;
+            }
         }
     }
+    if (found > 0)
+        {
+            printf("Ошибка, спецсимволы в названии: %s\n",str1);
+            return 0;
+        }
     // пробелы + тире
     if (!pr_space(core))
         return 0;
@@ -313,7 +434,7 @@ int pr_name(char *NAME,int *k){
                 printf("Отмена — выберите другое имя файла.\n");
                 return 0;
             }
-            printf("Ошибка: неизвестный выбор: %s\n",buf);
+            printf("Ошибка, некорректный выбор: %s\n",buf);
         } while (strcmp(buf,"1") != 0 && strcmp(buf,"2") != 0);
     }
     return 1;
@@ -335,42 +456,9 @@ void newobject(char *str,int *k,char *name)
             pr_str(str,k);
             if (*k==9)
                 return; 
-        } while (!strlen(str) || strcmp(str,"error")==0);
+        } while (str=="\0" || str =="\n" || str[0]== 27 || strcmp(str,"error")==0);
 }
 
-/*
-    Обработка ввода "продолжить / выйти".
-*/
-void newenter(int *i){
-    char string[11];
-        newgets(string, sizeof string);        
-        if (strlen(string)==0){
-            *i=0;
-            return;
-        }
-        else if (strlen(string) == 1 && string[0] == '2'){
-            *i=2;
-            return;
-        }
-        *i=1;
-        while (*i != 0 && *i != 2){
-            if (strcmp(string,"error")!=0)
-            {
-                printf("\nОшибка: неизвестный выбор:%s",string);
-            }
-            printf("\nнажмите enter чтобы продолжить или введите 2 для выхода в меню.");
-            printf("\nВаш выбор: ");
-            newgets(string, sizeof string);
-            if (strcmp(string,"error")==0)
-                continue;            
-            if (strlen(string)==0){
-                *i=0;
-                return;
-            }
-            else if (strlen(string) == 1 && string[0] == '2')
-                *i = 2;        
-        }
-}
 void city(char *NAME) {
     FILE *f;                 // указатель на файл (через него читаем/пишем)
     char name[STO];          // строка: название города (ввод пользователя)
@@ -406,7 +494,7 @@ void city(char *NAME) {
 
             if (Err==9) return;
 
-            else if (Err == 2 && strlen(NAME)==0) continue;
+            else if (Err == 2) continue;
 
             pr_txt(NAME);
             pr=pr_name(NAME,&k);
@@ -460,7 +548,7 @@ void city(char *NAME) {
         do
         {
             printf("Введите количество жителей: ");
-            newgets(chel,10);
+            newgets(chel,15);
             if (strcmp(chel,"error")==0) continue;
             if (exist_all(chel)==9)
                 return;
@@ -468,20 +556,19 @@ void city(char *NAME) {
             if (k==9)
                 return;
             people = (int)strtol(chel,NULL,10);
-        } while (!strlen(chel) || strcmp(chel,"error")==0);// не допускаем пустую строку
+        } while (chel[0]==27  || strcmp(chel,"error")==0);// не допускаем пустую строку
 
         newobject(country,&k,"страны");
         if (k==9) return;
-        printf("1");
         // записываем строку в файл в виде таблицы
         fprintf(f, "%-20s |%-15d |%-20s\n", name, people, country);
         printf("Данные успешно добавлены в файл %s.\n",NAME);
         // выводим подтверждение и печать строки на экран
         printf("%-20s |%-15s |%-20s\n", "город", "кол-во жителей", "страна");
         printf("%-20s |%-15d |%-20s\n", name, people, country);
-        printf("\nХотите продолжить вводить города нажмите enter или введите 2 для выхода в меню.");
-        printf("\nВаш выбор: ");
-        newenter(&i);
+        // printf("\nХотите продолжить вводить города нажмите enter или введите 2 для выхода в меню.");
+        // printf("\nВаш выбор: ");
+        // newenter(&i);
     }
     fclose(f);
 }
@@ -563,9 +650,9 @@ void Country(char *NAME)
         printf("Данные успешно добавлены в файл %s.\n",NAME);
         printf("%-20s |%-20s |%-20s\n", "страна", "столица", "континент");
         printf("%-20s |%-20s |%-20s\n", country, stolica, kontinent);
-        printf("\nХотите продолжить вводить страны нажмите enter или введите 2 для выхода в меню.");
-        printf("\nВаш выбор: ");
-        newenter(&i);
+        // printf("\nХотите продолжить вводить страны нажмите enter или введите 2 для выхода в меню.");
+        // printf("\nВаш выбор: ");
+        // newenter(&i);
     }
     fclose(f);
 }
