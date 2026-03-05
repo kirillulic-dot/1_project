@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Отладка files_project.exe",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${fileDirname}\\files_project.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "externalConsole": true,
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "preLaunchTask": "build"
+    }
+  ]
+}
