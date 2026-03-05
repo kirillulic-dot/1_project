@@ -2,14 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Запуск C программы",
+      "name": "Отладка project.exe",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
+      "program": "${fileDirname}\\project.exe",
       "args": [],
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
-      "environment": [],
       "externalConsole": true,
       "MIMode": "gdb",
       "miDebuggerPath": "gdb",
